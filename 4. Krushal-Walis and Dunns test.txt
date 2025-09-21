@@ -1,0 +1,27 @@
+library(tidyverse)
+library(FSA)          # For Dunn's test
+library(rstatix)      # For easy manipulation of test results
+
+# Load data
+df <- read.csv("Path")
+
+# Convert to relative abundance
+df_rel <- df %>%
+  mutate(across(-c(Culture_system, Biosecurity, Water_source, Seed_source, 
+                   Water_curcuit, Diseases_occurred, Antibiotics_used), 
+                ~ . / sum(.), .names = "rel_{.col}"))
+
+# Kruskal-Wallis test for water source
+kw_results <- df_long %>%
+  group_by(Phylum) %>%
+  summarise(p_value = kruskal.test(Relative_Abundance ~ Water_source)$p.value) %>%
+  filter(p_value < 0.05)
+
+# Get significant phyla for water source
+sig_phyla <- kw_results$Phylum
+
+# Run Dunn's test for significant phyla (Water source)
+dunn_results <- df_long %>%
+  filter(Phylum %in% sig_phyla) %>%
+  group_by(Phylum) %>%
+  rstatix::dunn_test(Relative_Abundance ~ Water_source, p.adjust.method = "BH")

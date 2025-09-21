@@ -1,0 +1,31 @@
+library(readxl)
+library(pheatmap)
+
+# Step 1: Load your data
+data <- read_excel("Path")
+
+# Step 2: Convert all selected columns to numeric
+antibiotic_usage <- data[, c("Erythromycin", "Ciprofloxacin", "Enrofloxacin", "Kanamycin", "Trimethoprim", 
+                             "Oxytetracycline", "Amoxicillin", "No antibiotic")]
+arg_abundance <- data[, c("Gene Names")]
+
+# Ensure all columns are numeric
+antibiotic_usage[] <- lapply(antibiotic_usage, function(x) as.numeric(as.character(x)))
+arg_abundance[] <- lapply(arg_abundance, function(x) as.numeric(as.character(x)))
+
+# Step 3: Calculate correlation matrix
+cor_matrix <- cor(antibiotic_usage, arg_abundance, use = "pairwise.complete.obs")
+
+# Step 4: Show high-resolution heatmap
+options(repr.plot.width = 12, repr.plot.height = 10, repr.plot.res = 300)  # High-resolution display
+
+pheatmap(cor_matrix, 
+         color = colorRampPalette(c("blue", "white", "red"))(100), 
+         clustering_distance_rows = "euclidean", 
+         clustering_distance_cols = "euclidean", 
+         clustering_method = "complete", 
+         main = "Correlation Heatmap",
+         breaks = seq(-1, 1, length.out = 100),
+         angle_col = 90)  # Rotate x-axis labels by 90 degrees
+
+

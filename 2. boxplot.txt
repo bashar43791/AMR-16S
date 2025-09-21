@@ -1,0 +1,48 @@
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(broom)
+library(openxlsx)
+
+# Read the datasets
+gene_data <- read.xlsx("Path)
+abundance_data <- read.xlsx("Path")
+
+# Reshape abundance_data to long format
+long_abundance_data <- abundance_data %>%
+    gather(key = "Gene", value = "Abundance", -Culture.system, -Antibiotics.used)
+
+# Merge the reshaped data with gene_data
+merged_data <- merge(long_abundance_data, gene_data, by = "Gene")
+
+# Multiply abundance by 10^2 (update this to 10^6 if necessary)
+merged_data$Abundance <- merged_data$Abundance * 10^2
+
+# Remove rows with missing or infinite values
+merged_data_clean <- merged_data %>% 
+    filter(!is.na(Abundance) & is.finite(Abundance))
+
+# Calculate the average abundance for each gene category by culture system
+average_abundance <- merged_data_clean %>%
+    group_by(Category, Culture.system) %>%
+    summarise(Average_Abundance = mean(Abundance, na.rm = TRUE))
+
+# Perform ANOVA for each gene category
+anova_results <- merged_data_clean %>%
+    group_by(Category) %>%
+    do(tidy(aov(Abundance ~ Culture.system, data = .)))
+
+# Perform Tukey's HSD test for posthoc comparison for each gene category
+posthoc_results <- merged_data_clean %>%
+    group_by(Category) %>%
+    do(tidy(TukeyHSD(aov(Abundance ~ Culture.system, data = .))))
+
+# Create a boxplot to visualize gene abundance differences across culture systems with individual y-axis labels per category
+plot <- ggplot(merged_data_clean, aes(x = Culture.system, y = Abundance, color = Culture.system)) +
+    geom_boxplot() +
+    facet_wrap(~Category, scales = "free_y") +  # Allow each category to have its own y-axis scale
+    scale_y_continuous(labels = scales::format_format(scientific = FALSE, big.mark = ",")) +  # Format y-axis labels
+    theme_minimal() +
+    labs(title = "", x = "", y = expression(Abundance ~ "(10"^4*")"))  # Use expression to add superscript 4
+

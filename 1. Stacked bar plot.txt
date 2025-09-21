@@ -1,0 +1,90 @@
+
+
+library(readxl)
+library(factoextra)
+
+data <- read_excel("Datapath")
+
+data_numeric <- data[, sapply(data, is.numeric)]
+
+data_standardized <- scale(data_numeric)
+
+# Perform PCA
+pca_result <- prcomp(data_standardized, center = TRUE, scale. = TRUE)
+
+# For the ellipses, color the points based on 'Species combination'
+fviz_pca_biplot(pca_result, 
+                geom.ind = "point",  # Plot individual points
+                col.ind = as.factor(data$`Species combination`), 
+                addEllipses = TRUE, 
+                ellipse.type = "confidence", 
+                ellipse.level = 0.95, 
+                repel = TRUE,
+                legend.title = "Species combination",  
+                label = "var"  # Display variable names on the biplot
+)
+
+
+
+> library(readxl)
+> library(tidyr)
+> library(dplyr)
+> library(ggplot2)
+> library(gridExtra)
+> 
+> # Define file path
+> file_path <- "Path"
+> 
+> # Read dataset
+> data <- read_excel(file_path)
+> 
+> # Ensure column names are properly formatted
+> colnames(data) <- make.names(colnames(data))
+> 
+> # Split multiple antibiotics into separate rows
+> data_long <- data %>%
++     separate_rows(Antibiotics.used, sep = ";") %>%  # Split by ";"
++     mutate(Antibiotics.used = trimws(Antibiotics.used)) %>% # Remove extra spaces
++     filter(Antibiotics.used != "No") # Remove farms that did not use antibiotics
+> 
+> # Split combined disease types into separate rows
+> data_long <- data_long %>%
++     separate_rows(Types.of.disease.occurred, sep = ";") %>%  # Split by ";"
++     mutate(Types.of.disease.occurred = trimws(Types.of.disease.occurred)) # Remove extra spaces
+> 
+> # Count occurrences of each disease type and the number of antibiotics used
+> antibiotic_disease_count <- data_long %>%
++     group_by(Types.of.disease.occurred, Antibiotics.used) %>%
++     summarise(Antibiotic.count = n(), .groups = "drop")
+> 
+> # Create the bar plot for the number of antibiotics used for each disease type
+> p2 <- ggplot(antibiotic_disease_count, aes(x = Types.of.disease.occurred, y = Antibiotic.count, fill = Antibiotics.used)) +
++     geom_bar(stat = "identity", position = "stack", width = 0.6) +  # Reduced bar width
++     labs(title = "",
++          x = "Disease Type", y = "Number of Farms",
++          fill = "Antibiotic Used") +
++     theme_minimal() +
++     scale_fill_brewer(palette = "Set3") +  # Set3 palette for more colors
++     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Smaller text size
++           plot.title = element_text(size = 12),  # Reduce title size
++           legend.text = element_text(size = 10))
+> 
+> # Count occurrences of each antibiotic per culture system
+> antibiotic_count <- data_long %>%
++     group_by(Antibiotics.used, Culture.system) %>%
++     summarise(Farm.count = n(), .groups = "drop")
+> 
+> # Create the stacked bar plot for antibiotic usage by culture system
+> p1 <- ggplot(antibiotic_count, aes(x = Antibiotics.used, y = Farm.count, fill = Culture.system)) +
++     geom_bar(stat = "identity", position = "stack", width = 0.6) +  
++     labs(title = "",
++          x = "Antibiotic Used", y = "Number of Farms",
++          fill = "Culture System") +
++     theme_minimal() +
++     scale_fill_brewer(palette = "Set2") +  # Choose a color palette
++     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  
++           plot.title = element_text(size = 12),  # Reduce title size
++           legend.text = element_text(size = 10))
+
+
+
